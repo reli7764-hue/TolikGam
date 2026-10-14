@@ -1,6 +1,8 @@
 package com.tolik.mishar
 
 import android.app.Activity
+import android.app.AlertDialog
+import android.content.SharedPreferences
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -9,6 +11,7 @@ import android.view.View
 import android.view.animation.DecelerateInterpolator
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.Spinner
@@ -31,9 +34,12 @@ class MainActivity : Activity() {
     private lateinit var setupScreen: View
     private lateinit var sourceScreen: View
     private lateinit var gameScreen: View
-    private lateinit var clientIdEdit: EditText
     private lateinit var loginBtn: Button
     private lateinit var spinner: Spinner
+    private lateinit var israelOnly: CheckBox
+    private lateinit var genreSpinner: Spinner
+    private lateinit var prefs: SharedPreferences
+    private var loadedLabel = ""
     private lateinit var loadBtn: Button
     private lateinit var loadStatus: TextView
     private lateinit var record: RecordView
@@ -56,9 +62,10 @@ class MainActivity : Activity() {
         setupScreen = findViewById(R.id.setup)
         sourceScreen = findViewById(R.id.source)
         gameScreen = findViewById(R.id.game)
-        clientIdEdit = findViewById(R.id.clientId)
         loginBtn = findViewById(R.id.loginBtn)
         spinner = findViewById(R.id.srcSpinner)
+        israelOnly = findViewById(R.id.israelOnly)
+        genreSpinner = findViewById(R.id.genreSpinner)
         loadBtn = findViewById(R.id.loadBtn)
         loadStatus = findViewById(R.id.loadStatus)
         record = findViewById(R.id.record)
@@ -73,7 +80,17 @@ class MainActivity : Activity() {
         revealBtn = findViewById(R.id.revealBtn)
         countTv = findViewById(R.id.count)
 
-        clientIdEdit.setText(sp.clientId)
+        prefs = getSharedPreferences("game", MODE_PRIVATE)
+        val genreAdapter = ArrayAdapter(this, R.layout.spinner_item,
+            listOf("כל הז'אנרים") + Genres.buckets.map { it.label })
+        genreAdapter.setDropDownViewResource(R.layout.spinner_item)
+        genreSpinner.adapter = genreAdapter
+        genreSpinner.setSelection(prefs.getInt("genre", 0).coerceIn(0, Genres.buckets.size))
+        findViewById<View>(R.id.lastfmBtn).setOnClickListener { askLastfmKey() }
+        israelOnly.isChecked = prefs.getBoolean("israelOnly", false)
+        israelOnly.setOnCheckedChangeListener { _, checked ->
+            prefs.edit().putBoolean("israelOnly", checked).apply()
+        }
         adapter = ArrayAdapter(this, R.layout.spinner_item, ArrayList<String>())
         adapter.setDropDownViewResource(R.layout.spinner_item)
         spinner.adapter = adapter
@@ -102,12 +119,6 @@ class MainActivity : Activity() {
     // ---------- login ----------
 
     private fun login() {
-        val cid = clientIdEdit.text.toString().trim()
-        if (cid.isEmpty()) {
-            clientIdEdit.error = "צריך להדביק Client ID"
-            return
-        }
-        sp.clientId = cid
         startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(sp.buildAuthUrl())))
     }
 
@@ -159,20 +170,46 @@ class MainActivity : Activity() {
 
     private fun loadTracks() {
         val id = sources.getOrNull(spinner.selectedItemPosition)?.first ?: "liked"
+        val listName = sources.getOrNull(spinner.selectedItemPosition)?.second ?: ""
+        val onlyIsrael = israelOnly.isChecked
+        val genreIndex = genreSpinner.selectedItemPosition
+        val bucket = Genres.buckets.getOrNull(genreIndex - 1)
+        val lastfmKey = prefs.getString("lastfm", "") ?: ""
+        prefs.edit().putInt("genre", genreIndex).apply()
         setEnabled(loadBtn, false)
         loadStatus.text = "טוען…"
         thread {
             try {
-                val list = sp.loadTracks(id) { n -> ui { loadStatus.text = "נטענו $n שירים…" } }
+                val all = sp.loadTracks(id) { n -> ui { loadStatus.text = "נטענו $n שירים…" } }
+                var list = if (onlyIsrael) all.filter { it.isIsraeli } else all
+                var unknown = 0
+                if (bucket != null && list.isNotEmpty()) {
+                    val artists = list.associate { it.artistId to it.mainArtist }
+                    val tags = sp.genresFor(artists, lastfmKey) { done, total ->
+                        ui { loadStatus.text = "מזהה ז'אנרים: $done מתוך $total אמנים…" }
+                    }
+                    unknown = list.count { tags[it.artistId].isNullOrEmpty() }
+                    list = list.filter { bucket.matches(tags[it.artistId].orEmpty()) }
+                }
                 ui {
                     setEnabled(loadBtn, true)
                     if (list.isEmpty()) {
-                        loadStatus.text = "לא נמצאו שירים ברשימה הזו"
+                        val parts = ArrayList<String>()
+                        parts.add(when {
+                            all.isEmpty() -> "לא נמצאו שירים ברשימה הזו."
+                            bucket != null -> "לא נמצאו שירים בז'אנר ${bucket.label}."
+                            else -> "מתוך ${all.size} שירים ברשימה, לא נמצאו שירים בעברית."
+                        })
+                        if (bucket != null && unknown > 0 && lastfmKey.isEmpty())
+                            parts.add("לספוטיפיי אין ז'אנר ל־$unknown שירים. מפתח Last.fm ישפר את הזיהוי.")
+                        loadStatus.text = parts.joinToString("\n")
                     } else {
                         tracks = list
                         pool.clear()
                         pool.addAll(list)
                         current = null
+                        loadedLabel = listOfNotNull(listName.takeIf { it.isNotEmpty() }, bucket?.label,
+                            if (onlyIsrael) "🇮🇱" else null).joinToString(" · ")
                         resetCard()
                         playStatus.text = "לחץ על טוליק כדי להגריל שיר"
                         updateCount()
@@ -183,6 +220,31 @@ class MainActivity : Activity() {
                 ui { setEnabled(loadBtn, true); loadStatus.text = "הטעינה נכשלה: ${e.message}" }
             }
         }
+    }
+
+    private fun askLastfmKey() {
+        val input = EditText(this).apply {
+            setText(prefs.getString("lastfm", ""))
+            hint = "API key"
+            textDirection = View.TEXT_DIRECTION_LTR
+            setSingleLine()
+        }
+        val box = android.widget.FrameLayout(this).apply {
+            val pad = (20 * resources.displayMetrics.density).toInt()
+            setPadding(pad, pad / 2, pad, 0)
+            addView(input)
+        }
+        AlertDialog.Builder(this)
+            .setTitle("מפתח Last.fm")
+            .setMessage("לא חובה. ספוטיפיי לא מסווג הרבה אמנים לז'אנרים, ו־Last.fm מכיר הרבה יותר. " +
+                "מפתח חינמי מקבלים ב־last.fm/api/account/create.")
+            .setView(box)
+            .setPositiveButton("שמור") { _, _ ->
+                prefs.edit().putString("lastfm", input.text.toString().trim()).apply()
+                toast("נשמר")
+            }
+            .setNegativeButton("ביטול", null)
+            .show()
     }
 
     // ---------- the game ----------
@@ -253,7 +315,7 @@ class MainActivity : Activity() {
     }
 
     private fun updateCount() {
-        countTv.text = "נשארו ${pool.size} מתוך ${tracks.size}"
+        countTv.text = "נשארו ${pool.size} מתוך ${tracks.size}\n$loadedLabel"
     }
 
     private fun openSpotify() {

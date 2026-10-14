@@ -1,8 +1,10 @@
 <resources>
-    <color name="plum">#2A1035</color>
-    <color name="plum2">#3D1A4D</color>
-    <color name="pink">#E8336D</color>
-    <color name="mustard">#F2B705</color>
-    <color name="paper">#FFF7F0</color>
-    <color name="muted">#C9B6D3</color>
+    <!-- names kept from the first version; values are now the green/black/red of Tolik's logo -->
+    <color name="plum">#0F1D15</color>      <!-- background: very dark green -->
+    <color name="plum2">#1D3326</color>     <!-- cards, fields -->
+    <color name="pink">#E5322D</color>      <!-- chili red: record ring, year -->
+    <color name="mustard">#8FD93A</color>   <!-- lime: reveal button -->
+    <color name="green">#1ED760</color>     <!-- main buttons -->
+    <color name="paper">#FFF7EA</color>
+    <color name="muted">#A9C4B2</color>
 </resources>

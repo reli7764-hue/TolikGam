@@ -22,7 +22,7 @@ class RecordView(context: Context, attrs: AttributeSet?) : View(context, attrs) 
         style = Paint.Style.STROKE; color = 0x26FFFFFF
     }
     private val ring = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE; color = 0xFFE8336D.toInt()
+        style = Paint.Style.STROKE; color = 0xFFE5322D.toInt()
     }
     private val bmpPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
     private val clip = Path()

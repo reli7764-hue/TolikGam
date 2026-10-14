@@ -19,86 +19,74 @@
             android:padding="22dp">
 
             <ImageView
-                android:layout_width="150dp"
-                android:layout_height="150dp"
-                android:layout_marginTop="12dp"
-                android:src="@drawable/ic_launcher"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:adjustViewBounds="true"
+                android:maxHeight="300dp"
+                android:src="@drawable/logo"
                 android:contentDescription="@null" />
 
             <TextView style="@style/Title" android:text="מי שר?" />
 
             <TextView style="@style/Body"
-                android:text="הגדרה חד־פעמית: הדבק את ה־Client ID של האפליקציה שיצרת ב־Spotify Developer Dashboard." />
-
-            <EditText
-                android:id="@+id/clientId"
-                android:layout_width="match_parent"
-                android:layout_height="54dp"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/field"
-                android:hint="Client ID"
-                android:inputType="text"
-                android:singleLine="true"
-                android:paddingStart="14dp"
-                android:paddingEnd="14dp"
-                android:textColor="#222222"
-                android:textColorHint="#888888"
-                android:textDirection="ltr" />
-
-            <TextView style="@style/Body"
-                android:layout_marginTop="16dp"
-                android:textSize="14sp"
+                android:layout_marginTop="8dp"
+                android:gravity="center"
                 android:textColor="@color/muted"
-                android:text="ב־Redirect URIs של האפליקציה בספוטיפיי צריך להוסיף בדיוק:" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:background="@drawable/code_bg"
-                android:padding="12dp"
-                android:text="tolikgame://callback"
-                android:textColor="@color/paper"
-                android:textDirection="ltr"
-                android:textIsSelectable="true"
-                android:typeface="monospace" />
+                android:text="מתחברים עם חשבון ספוטיפיי Premium, ואז בוחרים מאיפה להגריל." />
 
             <Button
                 android:id="@+id/loginBtn"
                 style="@style/BigButton"
                 android:layout_marginTop="20dp"
                 android:background="@drawable/btn_pink"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/plum"
                 android:text="התחבר לספוטיפיי" />
         </LinearLayout>
     </ScrollView>
 
     <!-- Choose what to draw from -->
-    <LinearLayout
+    <ScrollView
         android:id="@+id/source"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:visibility="gone">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:orientation="vertical"
         android:gravity="center_horizontal"
-        android:padding="22dp"
-        android:visibility="gone">
+        android:padding="22dp">
 
         <TextView style="@style/Title" android:text="מאיפה להגריל?" />
 
+        <TextView style="@style/Label" android:text="רשימה" />
         <Spinner
             android:id="@+id/srcSpinner"
+            style="@style/Picker" />
+
+        <TextView style="@style/Label" android:text="ז'אנר" />
+        <Spinner
+            android:id="@+id/genreSpinner"
+            style="@style/Picker" />
+
+        <CheckBox
+            android:id="@+id/israelOnly"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:layout_marginTop="10dp"
-            android:background="@drawable/field"
-            android:popupBackground="@drawable/field"
-            android:spinnerMode="dropdown" />
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:buttonTint="@color/pink"
+            android:paddingStart="8dp"
+            android:text="רק שירים מישראל 🇮🇱"
+            android:textColor="@color/paper"
+            android:textSize="18sp" />
 
         <Button
             android:id="@+id/loadBtn"
             style="@style/BigButton"
+            android:layout_marginTop="16dp"
             android:background="@drawable/btn_pink"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/plum"
             android:text="טען שירים" />
 
         <TextView
@@ -111,14 +99,16 @@
         <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="1" />
 
         <Button
+            android:id="@+id/lastfmBtn"
+            style="@style/Ghost"
+            android:text="שיפור זיהוי ז'אנרים (Last.fm)" />
+
+        <Button
             android:id="@+id/logoutBtn"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="@android:color/transparent"
-            android:textAllCaps="false"
-            android:textColor="@color/muted"
+            style="@style/Ghost"
             android:text="התנתק" />
     </LinearLayout>
+    </ScrollView>
 
     <!-- The game -->
     <LinearLayout
