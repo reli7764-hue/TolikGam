@@ -141,16 +141,21 @@ class Spotify(context: Context) {
 
     /** Playlists whose songs the app may read. Since 2026 that means ones you own or collaborate on. */
     fun playlists(): List<Pair<String, String>> {
-        val items = api("GET", "/me/playlists?limit=50").optJSONArray("items") ?: return emptyList()
-        val all = ArrayList<Pair<String, String>>()
-        val readable = ArrayList<Pair<String, String>>()
-        for (i in 0 until items.length()) {
-            val p = items.optJSONObject(i) ?: continue
-            val entry = p.optString("id") to p.optString("name")
-            all.add(entry)
-            if (p.has("items") || p.has("tracks")) readable.add(entry)
+        val me = try { api("GET", "/me").optString("id") } catch (e: Exception) { "" }
+        val out = ArrayList<Pair<String, String>>()
+        var next: String? = "/me/playlists?limit=50"
+        while (next != null && out.size < 500) {
+            val page = api("GET", next)
+            val items = page.optJSONArray("items") ?: break
+            for (i in 0 until items.length()) {
+                val p = items.optJSONObject(i) ?: continue
+                val owner = p.optJSONObject("owner")?.optString("id").orEmpty()
+                if (me.isEmpty() || owner == me || p.optBoolean("collaborative"))
+                    out.add(p.optString("id") to p.optString("name"))
+            }
+            next = page.optString("next").takeIf { it.isNotEmpty() && it != "null" }
         }
-        return readable.ifEmpty { all }
+        return out
     }
 
     fun loadTracks(source: String, progress: (Int) -> Unit): List<Track> =
@@ -272,7 +277,10 @@ class Spotify(context: Context) {
 
     // ---------- playback ----------
 
-    /** Plays the track on the active Spotify device. Returns a device name if it had to pick one. */
+    /**
+     * Plays the track. If no device is active, picks one from the device list
+     * (prefers this phone). Returns the device name if it had to pick one.
+     */
     fun play(uri: String): String? {
         val body = JSONObject().put("uris", JSONArray().put(uri)).toString()
         try {
@@ -280,8 +288,13 @@ class Spotify(context: Context) {
             return null
         } catch (e: ApiException) {
             if (e.code != 404) throw e
-            val devices = api("GET", "/me/player/devices").optJSONArray("devices") ?: throw e
-            val dev = devices.optJSONObject(0) ?: throw e
+            val list = api("GET", "/me/player/devices").optJSONArray("devices") ?: throw e
+            val devices = (0 until list.length()).mapNotNull { list.optJSONObject(it) }
+                .filter { !it.optBoolean("is_restricted") }
+            val dev = devices.firstOrNull { it.optBoolean("is_active") }
+                ?: devices.firstOrNull { it.optString("type").equals("Smartphone", true) }
+                ?: devices.firstOrNull()
+                ?: throw e
             api("PUT", "/me/player/play?device_id=" + enc(dev.optString("id")), body)
             return dev.optString("name")
         }

@@ -40,6 +40,7 @@ class MainActivity : Activity() {
     private lateinit var genreSpinner: Spinner
     private lateinit var prefs: SharedPreferences
     private var loadedLabel = ""
+    private var retryOnReturn: Track? = null
     private lateinit var loadBtn: Button
     private lateinit var loadStatus: TextView
     private lateinit var record: RecordView
@@ -217,7 +218,11 @@ class MainActivity : Activity() {
                     }
                 }
             } catch (e: Exception) {
-                ui { setEnabled(loadBtn, true); loadStatus.text = "הטעינה נכשלה: ${e.message}" }
+                val msg = if (e is ApiException && id != "liked" && (e.code == 403 || e.code == 404))
+                    "ספוטיפיי לא מרשה לקרוא את הרשימה הזו. אפשר להעתיק אותה לפלייליסט משלך " +
+                        "(באפליקציית ספוטיפיי: ⋯ ← הוספה לפלייליסט אחר ← פלייליסט חדש)."
+                else "הטעינה נכשלה: ${e.message}"
+                ui { setEnabled(loadBtn, true); loadStatus.text = msg }
             }
         }
     }
@@ -260,29 +265,57 @@ class MainActivity : Activity() {
         record.animate().cancel()
         record.animate().rotationBy(1080f).setDuration(1600)
             .setInterpolator(DecelerateInterpolator(2f)).start()
+        retryOnReturn = null
+        startPlayback(t, firstTry = true)
+    }
+
+    /** Spotify needs to be awake on some device. If it isn't, we open it and retry when you come back. */
+    private fun startPlayback(t: Track, firstTry: Boolean) {
         playStatus.text = "מנגן…"
         thread {
-            try {
-                val device = sp.play(t.uri)
-                ui {
-                    if (current === t) playStatus.text =
-                        if (device == null) "🎵 מתנגן בספוטיפיי – נחשו!" else "🎵 מתנגן ב־$device – נחשו!"
-                }
-            } catch (e: ApiException) {
-                ui {
-                    playStatus.text = when (e.code) {
-                        404 -> {
-                            openSpotify()
-                            "ספוטיפיי לא היה פעיל, אז פתחתי אותו. נגן בו משהו לשנייה, חזור ולחץ שוב על טוליק."
-                        }
-                        403 -> "ספוטיפיי סירב לנגן (צריך חשבון Premium)."
-                        else -> "הניגון נכשל: ${e.message}"
+            var attempt = 0
+            while (true) {
+                try {
+                    val device = sp.play(t.uri)
+                    ui {
+                        if (current === t) playStatus.text =
+                            if (device == null) "🎵 מתנגן בספוטיפיי – נחשו!" else "🎵 מתנגן ב־$device – נחשו!"
                     }
+                    return@thread
+                } catch (e: ApiException) {
+                    // right after Spotify opens it can take a moment to show up as a device
+                    if (e.code == 404 && !firstTry && attempt < 4) {
+                        attempt++
+                        Thread.sleep(1500)
+                        continue
+                    }
+                    ui {
+                        playStatus.text = when (e.code) {
+                            404 -> if (firstTry) {
+                                retryOnReturn = t
+                                openSpotify()
+                                "פתחתי את ספוטיפיי כדי להעיר אותו. חזרו לכאן והשיר יתחיל לבד."
+                            } else {
+                                "ספוטיפיי עדיין לא זמין. פתחו אותו, נגנו שיר כלשהו לשנייה, וחזרו ללחוץ על טוליק."
+                            }
+                            403 -> "ספוטיפיי סירב לנגן: ${e.message}. צריך חשבון Premium מחובר."
+                            else -> "הניגון נכשל (${e.code}): ${e.message}"
+                        }
+                    }
+                    return@thread
+                } catch (e: Exception) {
+                    ui { playStatus.text = "אין חיבור לאינטרנט: ${e.message}" }
+                    return@thread
                 }
-            } catch (e: Exception) {
-                ui { playStatus.text = "אין חיבור לאינטרנט: ${e.message}" }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val t = retryOnReturn ?: return
+        retryOnReturn = null
+        if (t === current) startPlayback(t, firstTry = false)
     }
 
     private fun reveal() {
