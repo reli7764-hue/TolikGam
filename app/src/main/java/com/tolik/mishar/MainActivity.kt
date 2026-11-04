@@ -31,7 +31,7 @@ class MainActivity : Activity() {
     private var tracks: List<Track> = emptyList()
     private val pool = ArrayList<Track>()
     private var current: Track? = null
-    private var retryOnReturn: Track? = null
+    private lateinit var player: LocalPlayer
     private var loadedLabel = ""
     private val sources = ArrayList<Pair<String, String>>()
     private lateinit var adapter: ArrayAdapter<String>
@@ -61,6 +61,7 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         sp = Spotify(this)
+        player = LocalPlayer(this)
         prefs = getSharedPreferences("game", MODE_PRIVATE)
 
         setupScreen = findViewById(R.id.setup)
@@ -103,7 +104,7 @@ class MainActivity : Activity() {
         loadBtn.setOnClickListener { loadTracks() }
         record.setOnClickListener { draw() }
         revealBtn.setOnClickListener { reveal() }
-        playStatus.setOnClickListener { current?.let { startPlayback(it, firstTry = true) } }
+        playStatus.setOnClickListener { current?.let { startPlayback(it) } }
         findViewById<View>(R.id.changeSrc).setOnClickListener { openSource() }
         findViewById<View>(R.id.lastfmBtn).setOnClickListener { askLastfmKey() }
         findViewById<View>(R.id.logoutBtn).setOnClickListener {
@@ -122,11 +123,9 @@ class MainActivity : Activity() {
         handleRedirect(intent)
     }
 
-    override fun onResume() {
-        super.onResume()
-        val t = retryOnReturn ?: return
-        retryOnReturn = null
-        if (t === current) startPlayback(t, firstTry = false)
+    override fun onDestroy() {
+        player.disconnect()
+        super.onDestroy()
     }
 
     // ---------- login ----------
@@ -277,47 +276,32 @@ class MainActivity : Activity() {
         record.animate().cancel()
         record.animate().rotationBy(1080f).setDuration(1600)
             .setInterpolator(DecelerateInterpolator(2f)).start()
-        retryOnReturn = null
-        startPlayback(t, firstTry = true)
+        startPlayback(t)
     }
 
     /**
-     * Tells this phone's Spotify app to play the song. If Spotify is asleep we open it,
-     * and play automatically when the player comes back to the game.
+     * Plays through the Spotify app on this phone (directly, without opening it).
+     * If that fails, falls back to Spotify's web remote control.
      */
-    private fun startPlayback(t: Track, firstTry: Boolean) {
+    private fun startPlayback(t: Track) {
         playStatus.text = "מנגן…"
-        thread {
-            var attempt = 0
-            while (true) {
-                try {
-                    val device = sp.play(t.uri, Build.MODEL ?: "")
-                    ui { if (current === t) playStatus.text = "🎵 מתנגן בטלפון ($device) – נחשו!" }
-                    return@thread
-                } catch (e: ApiException) {
-                    // right after Spotify opens it takes a moment to show up as a device
-                    if (e.code == 404 && !firstTry && attempt < 5) {
-                        attempt++
-                        Thread.sleep(1500)
-                        continue
-                    }
-                    ui {
-                        playStatus.text = when (e.code) {
-                            404 -> if (firstTry) {
-                                retryOnReturn = t
-                                openSpotify()
-                                "פתחתי את ספוטיפיי כדי להעיר אותו. חזרו לכאן והשיר יתחיל לבד."
-                            } else {
-                                "ספוטיפיי עדיין לא זמין. פתחו אותו, נגנו שיר כלשהו לשנייה, וחזרו ללחוץ כאן."
-                            }
-                            403 -> "ספוטיפיי סירב לנגן: ${e.message}. צריך חשבון Premium מחובר."
-                            else -> "הניגון נכשל (${e.code}): ${e.message}. לחצו כאן לנסות שוב."
-                        }
-                    }
-                    return@thread
+        player.play(t.uri) { localError ->
+            if (current !== t) return@play
+            if (localError == null) {
+                playStatus.text = "🎵 מתנגן – נחשו!"
+                return@play
+            }
+            thread {
+                val msg = try {
+                    sp.play(t.uri, Build.MODEL ?: "")
+                    null
                 } catch (e: Exception) {
-                    ui { playStatus.text = "אין חיבור לאינטרנט: ${e.message}" }
-                    return@thread
+                    e.message
+                }
+                ui {
+                    if (current === t) playStatus.text =
+                        if (msg == null) "🎵 מתנגן – נחשו!"
+                        else "לא הצלחתי לנגן: $localError\nלחצו כאן לנסות שוב."
                 }
             }
         }
@@ -354,12 +338,6 @@ class MainActivity : Activity() {
 
     private fun updateCount() {
         countTv.text = "נשארו ${pool.size} מתוך ${tracks.size}\n$loadedLabel"
-    }
-
-    private fun openSpotify() {
-        val launch = packageManager.getLaunchIntentForPackage("com.spotify.music")
-            ?: Intent(Intent.ACTION_VIEW, Uri.parse("https://open.spotify.com"))
-        startActivity(launch)
     }
 
     // ---------- helpers ----------

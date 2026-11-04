@@ -296,8 +296,24 @@ class Spotify(context: Context) {
             ?: phones.firstOrNull { it.optBoolean("is_active") }
             ?: phones.firstOrNull()
             ?: throw ApiException(404, "Spotify on this phone is not awake")
+        val id = dev.optString("id")
         val body = JSONObject().put("uris", JSONArray().put(uri)).toString()
-        api("PUT", "/me/player/play?device_id=" + enc(dev.optString("id")), body)
+        try {
+            api("PUT", "/me/player/play?device_id=" + enc(id), body)
+        } catch (e: ApiException) {
+            if (e.code !in 500..504) throw e
+            // 502 = the phone is listed but Spotify there is half asleep.
+            // Moving playback to it first usually wakes it up.
+            val transfer = JSONObject().put("device_ids", JSONArray().put(id)).put("play", false).toString()
+            try { api("PUT", "/me/player", transfer) } catch (_: ApiException) { }
+            Thread.sleep(1200)
+            try {
+                api("PUT", "/me/player/play?device_id=" + enc(id), body)
+            } catch (e2: ApiException) {
+                if (e2.code in 500..504) throw ApiException(404, "Spotify on this phone is asleep")
+                throw e2
+            }
+        }
         return dev.optString("name")
     }
 
