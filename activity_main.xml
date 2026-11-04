@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg"
+    android:layoutDirection="rtl">
+
+    <!-- Welcome / login -->
+    <ScrollView
+        android:id="@+id/setup"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:padding="22dp">
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:adjustViewBounds="true"
+                android:maxHeight="300dp"
+                android:src="@drawable/logo"
+                android:contentDescription="@null" />
+
+            <TextView style="@style/Title" android:text="מי שר?" />
+
+            <TextView style="@style/Body"
+                android:layout_marginTop="8dp"
+                android:gravity="center"
+                android:textColor="@color/muted"
+                android:text="מתחברים עם חשבון ספוטיפיי Premium, ואז בוחרים מאיפה להגריל." />
+
+            <Button
+                android:id="@+id/loginBtn"
+                style="@style/BigButton"
+                android:layout_marginTop="20dp"
+                android:background="@drawable/btn_green"
+                android:text="התחבר לספוטיפיי" />
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Choose what to draw from -->
+    <ScrollView
+        android:id="@+id/source"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:visibility="gone">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:padding="22dp">
+
+            <TextView style="@style/Title" android:text="מאיפה להגריל?" />
+
+            <TextView style="@style/Label" android:text="רשימה" />
+            <Spinner android:id="@+id/srcSpinner" style="@style/Picker" />
+
+            <TextView style="@style/Label" android:text="ז'אנר" />
+            <Spinner android:id="@+id/genreSpinner" style="@style/Picker" />
+
+            <CheckBox
+                android:id="@+id/israelOnly"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:buttonTint="@color/green"
+                android:paddingStart="8dp"
+                android:text="רק שירים מישראל 🇮🇱"
+                android:textColor="@color/paper"
+                android:textSize="18sp" />
+
+            <Button
+                android:id="@+id/loadBtn"
+                style="@style/BigButton"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/btn_green"
+                android:text="טען שירים" />
+
+            <TextView
+                android:id="@+id/loadStatus"
+                style="@style/Body"
+                android:layout_marginTop="12dp"
+                android:gravity="center"
+                android:textColor="@color/muted" />
+
+            <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="1" />
+
+            <Button
+                android:id="@+id/lastfmBtn"
+                style="@style/Ghost"
+                android:text="שיפור זיהוי ז'אנרים (Last.fm)" />
+
+            <Button
+                android:id="@+id/logoutBtn"
+                style="@style/Ghost"
+                android:text="התנתק" />
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- The game -->
+    <LinearLayout
+        android:id="@+id/game"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:padding="22dp"
+        android:visibility="gone">
+
+        <com.tolik.mishar.RecordView
+            android:id="@+id/record"
+            android:layout_width="260dp"
+            android:layout_height="260dp"
+            android:layout_marginTop="16dp"
+            android:contentDescription="הגרל שיר" />
+
+        <TextView
+            android:id="@+id/playStatus"
+            style="@style/Body"
+            android:layout_marginTop="14dp"
+            android:minHeight="44dp"
+            android:gravity="center"
+            android:textColor="@color/muted" />
+
+        <FrameLayout
+            android:id="@+id/card"
+            android:layout_width="match_parent"
+            android:layout_height="150dp"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/card_hidden"
+            android:padding="14dp">
+
+            <TextView
+                android:id="@+id/cardQ"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:fontFamily="@font/secular_one"
+                android:text="?"
+                android:textColor="@color/muted"
+                android:textSize="56sp" />
+
+            <LinearLayout
+                android:id="@+id/cardContent"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:visibility="gone">
+
+                <ImageView
+                    android:id="@+id/cover"
+                    android:layout_width="110dp"
+                    android:layout_height="110dp"
+                    android:scaleType="centerCrop"
+                    android:contentDescription="@null" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="14dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/year"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/secular_one"
+                        android:includeFontPadding="false"
+                        android:textColor="@color/red"
+                        android:textSize="52sp" />
+                    <TextView
+                        android:id="@+id/artist"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:maxLines="2"
+                        android:ellipsize="end"
+                        android:textColor="@color/bg"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+                    <TextView
+                        android:id="@+id/songTitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:maxLines="2"
+                        android:ellipsize="end"
+                        android:textColor="@color/bg"
+                        android:textSize="15sp" />
+                </LinearLayout>
+            </LinearLayout>
+        </FrameLayout>
+
+        <Button
+            android:id="@+id/revealBtn"
+            style="@style/BigButton"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/btn_lime"
+            android:text="חשוף" />
+
+        <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="1" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+            <TextView
+                android:id="@+id/count"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="@color/muted"
+                android:textSize="14sp" />
+            <Button
+                android:id="@+id/changeSrc"
+                style="@style/Ghost"
+                android:text="החלף רשימה" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

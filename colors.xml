@@ -1,0 +1,14 @@
+<resources>
+    <color name="bg">#0F1D15</color>
+    <color name="bg2">#1D3326</color>
+    <color name="red">#E5322D</color>
+    <color name="lime">#8FD93A</color>
+    <color name="green">#1ED760</color>
+    <color name="paper">#FFF7EA</color>
+    <color name="muted">#A9C4B2</color>
+    <!-- old names, still used by files from earlier uploads -->
+    <color name="plum">#0F1D15</color>
+    <color name="plum2">#1D3326</color>
+    <color name="pink">#E5322D</color>
+    <color name="mustard">#8FD93A</color>
+</resources>

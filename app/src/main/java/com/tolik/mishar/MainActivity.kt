@@ -300,7 +300,7 @@ class MainActivity : Activity() {
                 }
                 ui {
                     if (current === t) playStatus.text =
-                        if (msg == null) "🎵 מתנגן – נחשו!"
+                        if (msg == null) "🎵 נשלח דרך השרתים של ספוטיפיי.\nהחיבור הישיר נכשל: $localError"
                         else "לא הצלחתי לנגן: $localError\nלחצו כאן לנסות שוב."
                 }
             }
