@@ -51,7 +51,7 @@ class Spotify(context: Context) {
     private val prefs = context.getSharedPreferences("spotify", Context.MODE_PRIVATE)
     private val genreCache = context.getSharedPreferences("genres", Context.MODE_PRIVATE)
 
-    val clientId: String = CLIENT_ID
+    private val clientId: String = CLIENT_ID
 
     val loggedIn: Boolean
         get() = prefs.getString("refresh", null) != null
@@ -277,27 +277,28 @@ class Spotify(context: Context) {
 
     // ---------- playback ----------
 
+    /** Every Spotify app/speaker/computer logged into the account right now. */
+    fun devices(): List<JSONObject> {
+        val list = api("GET", "/me/player/devices").optJSONArray("devices") ?: JSONArray()
+        return (0 until list.length()).mapNotNull { list.optJSONObject(it) }
+    }
+
     /**
-     * Plays the track. If no device is active, picks one from the device list
-     * (prefers this phone). Returns the device name if it had to pick one.
+     * Plays the track on THIS phone's Spotify app, never on a computer or speaker that
+     * happens to be logged into the same account. Returns the device name.
+     * Throws 404 if the phone's Spotify isn't awake, so the caller can open it and retry.
      */
-    fun play(uri: String): String? {
-        val body = JSONObject().put("uris", JSONArray().put(uri)).toString()
-        try {
-            api("PUT", "/me/player/play", body)
-            return null
-        } catch (e: ApiException) {
-            if (e.code != 404) throw e
-            val list = api("GET", "/me/player/devices").optJSONArray("devices") ?: throw e
-            val devices = (0 until list.length()).mapNotNull { list.optJSONObject(it) }
-                .filter { !it.optBoolean("is_restricted") }
-            val dev = devices.firstOrNull { it.optBoolean("is_active") }
-                ?: devices.firstOrNull { it.optString("type").equals("Smartphone", true) }
-                ?: devices.firstOrNull()
-                ?: throw e
-            api("PUT", "/me/player/play?device_id=" + enc(dev.optString("id")), body)
-            return dev.optString("name")
+    fun play(uri: String, phoneModel: String): String {
+        val phones = devices().filter {
+            !it.optBoolean("is_restricted") && it.optString("type").equals("Smartphone", true)
         }
+        val dev = phones.firstOrNull { phoneModel.isNotEmpty() && it.optString("name").contains(phoneModel, true) }
+            ?: phones.firstOrNull { it.optBoolean("is_active") }
+            ?: phones.firstOrNull()
+            ?: throw ApiException(404, "Spotify on this phone is not awake")
+        val body = JSONObject().put("uris", JSONArray().put(uri)).toString()
+        api("PUT", "/me/player/play?device_id=" + enc(dev.optString("id")), body)
+        return dev.optString("name")
     }
 
     // ---------- helpers ----------
@@ -308,7 +309,7 @@ class Spotify(context: Context) {
             c.requestMethod = method
             c.connectTimeout = 15000
             c.readTimeout = 20000
-            c.setRequestProperty("User-Agent", "TolikGame/1.0")
+            c.setRequestProperty("User-Agent", "TolikGame/1.1")
             if (token != null) c.setRequestProperty("Authorization", "Bearer $token")
             if (body != null) {
                 c.doOutput = true

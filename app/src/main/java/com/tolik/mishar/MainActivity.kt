@@ -2,10 +2,11 @@ package com.tolik.mishar
 
 import android.app.Activity
 import android.app.AlertDialog
-import android.content.SharedPreferences
 import android.content.Intent
+import android.content.SharedPreferences
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.view.animation.DecelerateInterpolator
@@ -13,6 +14,7 @@ import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.Spinner
 import android.widget.TextView
@@ -24,10 +26,13 @@ import kotlin.random.Random
 class MainActivity : Activity() {
 
     private lateinit var sp: Spotify
+    private lateinit var prefs: SharedPreferences
 
     private var tracks: List<Track> = emptyList()
     private val pool = ArrayList<Track>()
     private var current: Track? = null
+    private var retryOnReturn: Track? = null
+    private var loadedLabel = ""
     private val sources = ArrayList<Pair<String, String>>()
     private lateinit var adapter: ArrayAdapter<String>
 
@@ -36,11 +41,8 @@ class MainActivity : Activity() {
     private lateinit var gameScreen: View
     private lateinit var loginBtn: Button
     private lateinit var spinner: Spinner
-    private lateinit var israelOnly: CheckBox
     private lateinit var genreSpinner: Spinner
-    private lateinit var prefs: SharedPreferences
-    private var loadedLabel = ""
-    private var retryOnReturn: Track? = null
+    private lateinit var israelOnly: CheckBox
     private lateinit var loadBtn: Button
     private lateinit var loadStatus: TextView
     private lateinit var record: RecordView
@@ -59,14 +61,15 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         sp = Spotify(this)
+        prefs = getSharedPreferences("game", MODE_PRIVATE)
 
         setupScreen = findViewById(R.id.setup)
         sourceScreen = findViewById(R.id.source)
         gameScreen = findViewById(R.id.game)
         loginBtn = findViewById(R.id.loginBtn)
         spinner = findViewById(R.id.srcSpinner)
-        israelOnly = findViewById(R.id.israelOnly)
         genreSpinner = findViewById(R.id.genreSpinner)
+        israelOnly = findViewById(R.id.israelOnly)
         loadBtn = findViewById(R.id.loadBtn)
         loadStatus = findViewById(R.id.loadStatus)
         record = findViewById(R.id.record)
@@ -81,26 +84,28 @@ class MainActivity : Activity() {
         revealBtn = findViewById(R.id.revealBtn)
         countTv = findViewById(R.id.count)
 
-        prefs = getSharedPreferences("game", MODE_PRIVATE)
+        adapter = ArrayAdapter(this, R.layout.spinner_item, ArrayList<String>())
+        adapter.setDropDownViewResource(R.layout.spinner_item)
+        spinner.adapter = adapter
+
         val genreAdapter = ArrayAdapter(this, R.layout.spinner_item,
             listOf("כל הז'אנרים") + Genres.buckets.map { it.label })
         genreAdapter.setDropDownViewResource(R.layout.spinner_item)
         genreSpinner.adapter = genreAdapter
         genreSpinner.setSelection(prefs.getInt("genre", 0).coerceIn(0, Genres.buckets.size))
-        findViewById<View>(R.id.lastfmBtn).setOnClickListener { askLastfmKey() }
+
         israelOnly.isChecked = prefs.getBoolean("israelOnly", false)
         israelOnly.setOnCheckedChangeListener { _, checked ->
             prefs.edit().putBoolean("israelOnly", checked).apply()
         }
-        adapter = ArrayAdapter(this, R.layout.spinner_item, ArrayList<String>())
-        adapter.setDropDownViewResource(R.layout.spinner_item)
-        spinner.adapter = adapter
 
         loginBtn.setOnClickListener { login() }
         loadBtn.setOnClickListener { loadTracks() }
         record.setOnClickListener { draw() }
         revealBtn.setOnClickListener { reveal() }
+        playStatus.setOnClickListener { current?.let { startPlayback(it, firstTry = true) } }
         findViewById<View>(R.id.changeSrc).setOnClickListener { openSource() }
+        findViewById<View>(R.id.lastfmBtn).setOnClickListener { askLastfmKey() }
         findViewById<View>(R.id.logoutBtn).setOnClickListener {
             sp.logout()
             show(setupScreen)
@@ -115,6 +120,13 @@ class MainActivity : Activity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleRedirect(intent)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val t = retryOnReturn ?: return
+        retryOnReturn = null
+        if (t === current) startPlayback(t, firstTry = false)
     }
 
     // ---------- login ----------
@@ -234,7 +246,7 @@ class MainActivity : Activity() {
             textDirection = View.TEXT_DIRECTION_LTR
             setSingleLine()
         }
-        val box = android.widget.FrameLayout(this).apply {
+        val box = FrameLayout(this).apply {
             val pad = (20 * resources.displayMetrics.density).toInt()
             setPadding(pad, pad / 2, pad, 0)
             addView(input)
@@ -269,22 +281,22 @@ class MainActivity : Activity() {
         startPlayback(t, firstTry = true)
     }
 
-    /** Spotify needs to be awake on some device. If it isn't, we open it and retry when you come back. */
+    /**
+     * Tells this phone's Spotify app to play the song. If Spotify is asleep we open it,
+     * and play automatically when the player comes back to the game.
+     */
     private fun startPlayback(t: Track, firstTry: Boolean) {
         playStatus.text = "מנגן…"
         thread {
             var attempt = 0
             while (true) {
                 try {
-                    val device = sp.play(t.uri)
-                    ui {
-                        if (current === t) playStatus.text =
-                            if (device == null) "🎵 מתנגן בספוטיפיי – נחשו!" else "🎵 מתנגן ב־$device – נחשו!"
-                    }
+                    val device = sp.play(t.uri, Build.MODEL ?: "")
+                    ui { if (current === t) playStatus.text = "🎵 מתנגן בטלפון ($device) – נחשו!" }
                     return@thread
                 } catch (e: ApiException) {
-                    // right after Spotify opens it can take a moment to show up as a device
-                    if (e.code == 404 && !firstTry && attempt < 4) {
+                    // right after Spotify opens it takes a moment to show up as a device
+                    if (e.code == 404 && !firstTry && attempt < 5) {
                         attempt++
                         Thread.sleep(1500)
                         continue
@@ -296,10 +308,10 @@ class MainActivity : Activity() {
                                 openSpotify()
                                 "פתחתי את ספוטיפיי כדי להעיר אותו. חזרו לכאן והשיר יתחיל לבד."
                             } else {
-                                "ספוטיפיי עדיין לא זמין. פתחו אותו, נגנו שיר כלשהו לשנייה, וחזרו ללחוץ על טוליק."
+                                "ספוטיפיי עדיין לא זמין. פתחו אותו, נגנו שיר כלשהו לשנייה, וחזרו ללחוץ כאן."
                             }
                             403 -> "ספוטיפיי סירב לנגן: ${e.message}. צריך חשבון Premium מחובר."
-                            else -> "הניגון נכשל (${e.code}): ${e.message}"
+                            else -> "הניגון נכשל (${e.code}): ${e.message}. לחצו כאן לנסות שוב."
                         }
                     }
                     return@thread
@@ -309,13 +321,6 @@ class MainActivity : Activity() {
                 }
             }
         }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        val t = retryOnReturn ?: return
-        retryOnReturn = null
-        if (t === current) startPlayback(t, firstTry = false)
     }
 
     private fun reveal() {

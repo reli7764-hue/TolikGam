@@ -2,10 +2,10 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/plum"
+    android:background="@color/bg"
     android:layoutDirection="rtl">
 
-    <!-- Setup: one-time Client ID + login -->
+    <!-- Welcome / login -->
     <ScrollView
         android:id="@+id/setup"
         android:layout_width="match_parent"
@@ -38,8 +38,7 @@
                 android:id="@+id/loginBtn"
                 style="@style/BigButton"
                 android:layout_marginTop="20dp"
-                android:background="@drawable/btn_pink"
-                android:textColor="@color/plum"
+                android:background="@drawable/btn_green"
                 android:text="התחבר לספוטיפיי" />
         </LinearLayout>
     </ScrollView>
@@ -51,63 +50,58 @@
         android:layout_height="match_parent"
         android:fillViewport="true"
         android:visibility="gone">
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:gravity="center_horizontal"
-        android:padding="22dp">
-
-        <TextView style="@style/Title" android:text="מאיפה להגריל?" />
-
-        <TextView style="@style/Label" android:text="רשימה" />
-        <Spinner
-            android:id="@+id/srcSpinner"
-            style="@style/Picker" />
-
-        <TextView style="@style/Label" android:text="ז'אנר" />
-        <Spinner
-            android:id="@+id/genreSpinner"
-            style="@style/Picker" />
-
-        <CheckBox
-            android:id="@+id/israelOnly"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:buttonTint="@color/pink"
-            android:paddingStart="8dp"
-            android:text="רק שירים מישראל 🇮🇱"
-            android:textColor="@color/paper"
-            android:textSize="18sp" />
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:padding="22dp">
 
-        <Button
-            android:id="@+id/loadBtn"
-            style="@style/BigButton"
-            android:layout_marginTop="16dp"
-            android:background="@drawable/btn_pink"
-            android:textColor="@color/plum"
-            android:text="טען שירים" />
+            <TextView style="@style/Title" android:text="מאיפה להגריל?" />
 
-        <TextView
-            android:id="@+id/loadStatus"
-            style="@style/Body"
-            android:layout_marginTop="12dp"
-            android:gravity="center"
-            android:textColor="@color/muted" />
+            <TextView style="@style/Label" android:text="רשימה" />
+            <Spinner android:id="@+id/srcSpinner" style="@style/Picker" />
 
-        <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="1" />
+            <TextView style="@style/Label" android:text="ז'אנר" />
+            <Spinner android:id="@+id/genreSpinner" style="@style/Picker" />
 
-        <Button
-            android:id="@+id/lastfmBtn"
-            style="@style/Ghost"
-            android:text="שיפור זיהוי ז'אנרים (Last.fm)" />
+            <CheckBox
+                android:id="@+id/israelOnly"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:buttonTint="@color/green"
+                android:paddingStart="8dp"
+                android:text="רק שירים מישראל 🇮🇱"
+                android:textColor="@color/paper"
+                android:textSize="18sp" />
 
-        <Button
-            android:id="@+id/logoutBtn"
-            style="@style/Ghost"
-            android:text="התנתק" />
-    </LinearLayout>
+            <Button
+                android:id="@+id/loadBtn"
+                style="@style/BigButton"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/btn_green"
+                android:text="טען שירים" />
+
+            <TextView
+                android:id="@+id/loadStatus"
+                style="@style/Body"
+                android:layout_marginTop="12dp"
+                android:gravity="center"
+                android:textColor="@color/muted" />
+
+            <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="1" />
+
+            <Button
+                android:id="@+id/lastfmBtn"
+                style="@style/Ghost"
+                android:text="שיפור זיהוי ז'אנרים (Last.fm)" />
+
+            <Button
+                android:id="@+id/logoutBtn"
+                style="@style/Ghost"
+                android:text="התנתק" />
+        </LinearLayout>
     </ScrollView>
 
     <!-- The game -->
@@ -181,7 +175,7 @@
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/secular_one"
                         android:includeFontPadding="false"
-                        android:textColor="@color/pink"
+                        android:textColor="@color/red"
                         android:textSize="52sp" />
                     <TextView
                         android:id="@+id/artist"
@@ -189,7 +183,7 @@
                         android:layout_height="wrap_content"
                         android:maxLines="2"
                         android:ellipsize="end"
-                        android:textColor="@color/plum"
+                        android:textColor="@color/bg"
                         android:textSize="18sp"
                         android:textStyle="bold" />
                     <TextView
@@ -198,7 +192,7 @@
                         android:layout_height="wrap_content"
                         android:maxLines="2"
                         android:ellipsize="end"
-                        android:textColor="@color/plum"
+                        android:textColor="@color/bg"
                         android:textSize="15sp" />
                 </LinearLayout>
             </LinearLayout>
@@ -208,8 +202,7 @@
             android:id="@+id/revealBtn"
             style="@style/BigButton"
             android:layout_marginTop="14dp"
-            android:background="@drawable/btn_yellow"
-            android:textColor="@color/plum"
+            android:background="@drawable/btn_lime"
             android:text="חשוף" />
 
         <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="1" />
@@ -228,11 +221,7 @@
                 android:textSize="14sp" />
             <Button
                 android:id="@+id/changeSrc"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="@android:color/transparent"
-                android:textAllCaps="false"
-                android:textColor="@color/muted"
+                style="@style/Ghost"
                 android:text="החלף רשימה" />
         </LinearLayout>
     </LinearLayout>
